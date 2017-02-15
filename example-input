@@ -1,0 +1,31 @@
+# Network path information
+# All the network paths follow this format, i.e., src, dst and route
+# src means the source of the path
+# dst means the destination of the path
+# route lists all the components between src and dst
+
+<src="S1" dst="Internet" route="Agg1,DNS1"/>
+<src="S1" dst="Internet" route="Agg2,DNS1"/>
+<src="S2" dst="Internet" route="Agg1,DNS1"/>
+<src="S2" dst="Internet" route="Agg2,DNS1"/>
+
+
+# ---- IP address information ---- 
+# Note that each item follows the format: unique id, name, IP address,
+# and vulnerabilities (related to software components)
+
+{S1, "Server-1", "172.28.228.21", vul="v4,v5"}
+{S2, "Server-2", "172.28.228.22", vul="v1"}
+
+{Agg1, "Agg-1", "10.0.0.1", vul="v3"}
+{Agg2, "Agg-2", "10.0.0.2", vul="v1"}
+
+{DNS1, "DNS-1", "75.142.33.98", vul="v2,v3"}
+
+# ---- Vulnerability scoring ----
+
+{name="v1" score="3"}
+{name="v2" score="4"}
+{name="v3" score="1"}
+{name="v4" score="10"}
+{name="v5" score="7"}
