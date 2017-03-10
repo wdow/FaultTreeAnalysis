@@ -24,6 +24,21 @@ def sanity_check(args):
         
 #end sanity_check
 
+def lookup(ls, comp):
+    """helper function, finds if comp is present in a nested list and returns
+    that nested list's index"""
+    for entry in ls:
+        if (entry[0] == comp):
+            return ls.index(entry) + 1
+    return -1
+    
+def get_weight(ls, comp):
+    """helper function, finds weight of specified comp in nested list"""
+    for entry in ls:
+        if (entry[0] == comp):
+            return entry[1]
+    return -1
+
 def main(args):
     """"Main logic"""
     
@@ -43,18 +58,18 @@ def main(args):
     path_vulnerabilities = []
 
     comp_tracker = 1
-    comps_to_ints = {}
-    comps_to_weights = {}
+    #comps_to_ints = {}
+    comps_to_weights = []
 
     for path in paths:
         path_vuls = Set([])
         path_comps = [x for x in path[2].split(',')]
         path_comps.append(path[0])
         
-        for comp in path_comps:
+        '''for comp in path_comps:
             if comp not in comps_to_ints:
                 comps_to_ints[comp] = comp_tracker
-                comp_tracker += 1
+                comp_tracker += 1'''
         #print "map: "
         #print comps_to_ints
         
@@ -72,21 +87,22 @@ def main(args):
                         if(cv == vul[0]):
                             weight += int(vul[1])
                             #print weight
-                    comps_to_weights[comp[0]] = weight
+                if [comp[0], weight] not in comps_to_weights:
+                    comps_to_weights.append([comp[0], weight])
         
         path_vulnerabilities.append(path_comps)
                         
-    print "int tags: "
-    print comps_to_ints
-    print "weights: "
-    print comps_to_weights
+    #print "int tags: "
+    #print comps_to_ints
+    #print "weights: "
+    #print comps_to_weights
     
         
     
     #print path_vulnerabilities
 
-    num_variables = str(len(comps_to_ints))
-    num_clauses = str(len(comps_to_ints) + len(path_vulnerabilities))
+    num_variables = str(len(comps_to_weights))
+    num_clauses = str(len(comps_to_weights) + len(path_vulnerabilities))
     hard_weight = str(sum(int(vul[1]) for vul in vuls ) + 1)
     
     #print hard_weight
@@ -103,14 +119,14 @@ def main(args):
     for path in path_vulnerabilities:
         mi.write(hard_weight)
         for comp in path:
-            mi.write(" " + str(comps_to_ints[comp]))
+            mi.write(" " + str(lookup(comps_to_weights, comp)))
         mi.write(" 0\n")
         #mi.write(hard_weight + " " + " ".join(path) + " 0\n")
     
-    #write the clauses wieghting each component, preappended by hard weight minus component weight
+    #write the clauses weighting each component, preappended by hard weight minus component weight
     for comp in comps:
-        mi.write(str(int(hard_weight) - comps_to_weights[comp[0]]) + " -"
-            + str(comps_to_ints[comp[0]]) + " 0\n")
+        mi.write(str(int(hard_weight) - get_weight(comps_to_weights, comp[0])) + " -"
+            + str(lookup(comps_to_weights, comp[0])) + " 0\n")
         #mi.write(str(vul[1]) + " " + "-" + str(vuls.index(vul) + 1) + " 0\n")
         
     #now run the maxino SAT-solver on the tempfile to find a risk group,
@@ -119,27 +135,38 @@ def main(args):
     optimum_result = 's OPTIMUM FOUND\nv (?P<opt>.+)'
     out = open(args.outfile, "w")
 
-    mi.seek(0)
-    test= mi.read()
-    print test
-    mi.seek(0)
-    #run maxino SAT-solver on the tempfile
-    try:
-        maxino_output = check_output(["./maxino-2015-k16-static", mi.name])
-    except CalledProcessError as ex:
-        maxino_output = ex.output
-        returncode = ex.returncode
-        if returncode != 10: # some other error happened
-            raise
     
-    rg = re.findall(optimum_result, maxino_output)
+    for x in range(0, args.reps):
+        mi.seek(0)
+        test= mi.read()
+        print test
+        mi.seek(0)
+        #run maxino SAT-solver on the tempfile
+        try:
+            maxino_output = check_output(["./" + args.satsolver, mi.name])
+        except CalledProcessError as ex:
+            maxino_output = ex.output
+            returncode = ex.returncode
+            if returncode != 10: # some other error happened
+                raise
     
-    print rg
-    component_config = [int(x) for x in rg[0].split(" ")]
-    #for comp in 
+        rg = re.findall(optimum_result, maxino_output)
+        cutset = ""
+        total_weight = 0
+        component_config = [int(x) for x in rg[0].split(" ")]
+        for i in component_config:
+
+            if(i > 0):
+                cutset += comps_to_weights[i-1][0]
+                total_weight += comps_to_weights[i-1][1]
+            
+            
+        out.write("<cutset=\"" + cutset + "\" weight=\"" + str(total_weight)
+            + "\"/>\n")
     
     #close tempfile, which deletes it
     mi.close()
+    out.close()
 
 #end main
 
@@ -167,7 +194,7 @@ if __name__ == "__main__":
     parser.add_argument('--reps',
                         '-r',
                         type=int,
-                        default=3,
+                        default=1,
                         help='''Specify the number of risk groups that should be found.''')
     args = parser.parse_args()
     
