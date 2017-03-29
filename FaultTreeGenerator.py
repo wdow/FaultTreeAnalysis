@@ -6,6 +6,7 @@ import sys
 from tempfile import NamedTemporaryFile
 from sets import Set
 from subprocess import check_output, CalledProcessError
+import xml.etree.ElementTree as ET
 
 def sanity_check(args):
     """Check to ensure infile exists, outfile is writeable, and SAT-solver is useable"""
@@ -38,6 +39,29 @@ def get_weight(ls, comp):
         if (entry[0] == comp):
             return entry[1]
     return -1
+    
+def assemble_SATinput(num_variables, num_clauses, hard_weight,
+    path_vulnerabilities, comps_to_weights, comps):
+    mi = NamedTemporaryFile()
+
+    mi.write("p wcnf " + num_variables + " " + str(num_clauses) + " "
+        + hard_weight + "\n")
+    
+    #write the components, preappended with the hard weight
+    for path in path_vulnerabilities:
+        mi.write(hard_weight)
+        for comp in path:
+            mi.write(" " + str(lookup(comps_to_weights, comp)))
+        mi.write(" 0\n")
+        #mi.write(hard_weight + " " + " ".join(path) + " 0\n")
+    
+    #write the clauses weighting each component
+    for comp in comps:
+        mi.write(str(-1 * get_weight(comps_to_weights, comp[0])) + " -"
+            + str(lookup(comps_to_weights, comp[0])) + " 0\n")
+        #mi.write(str(vul[1]) + " " + "-" + str(vuls.index(vul) + 1) + " 0\n")
+        
+    return mi
 
 def main(args):
     """"Main logic"""
@@ -110,24 +134,8 @@ def main(args):
     #print num_variables, num_clauses, hard_weight
 
     #now generate maxino input as a tempfile
-    mi = NamedTemporaryFile()
-
-    mi.write("p wcnf " + num_variables + " " + num_clauses + " "
-        + hard_weight + "\n")
-    
-    #write the components, preappended with the hard weight
-    for path in path_vulnerabilities:
-        mi.write(hard_weight)
-        for comp in path:
-            mi.write(" " + str(lookup(comps_to_weights, comp)))
-        mi.write(" 0\n")
-        #mi.write(hard_weight + " " + " ".join(path) + " 0\n")
-    
-    #write the clauses weighting each component, preappended by hard weight minus component weight
-    for comp in comps:
-        mi.write(str(int(hard_weight) - get_weight(comps_to_weights, comp[0])) + " -"
-            + str(lookup(comps_to_weights, comp[0])) + " 0\n")
-        #mi.write(str(vul[1]) + " " + "-" + str(vuls.index(vul) + 1) + " 0\n")
+    mi = assemble_SATinput(num_variables, num_clauses, hard_weight,
+        path_vulnerabilities, comps_to_weights, comps)
         
     #now run the maxino SAT-solver on the tempfile to find a risk group,
     #then append a line to the tempfile to remove the old risk group from
@@ -135,8 +143,11 @@ def main(args):
     optimum_result = 's OPTIMUM FOUND\nv (?P<opt>.+)'
     out = open(args.outfile, "w")
 
+    root = ET.Element("cutsets")
+    cutsets = []
     
-    for x in range(0, args.reps):
+    for rep in range(0, args.reps):
+        print rep
         mi.seek(0)
         test= mi.read()
         print test
@@ -151,18 +162,41 @@ def main(args):
                 raise
     
         rg = re.findall(optimum_result, maxino_output)
-        cutset = ""
+        cutset = []
         total_weight = 0
         component_config = [int(x) for x in rg[0].split(" ")]
         for i in component_config:
 
             if(i > 0):
-                cutset += comps_to_weights[i-1][0]
+                cutset.append(comps_to_weights[i-1][0])
                 total_weight += comps_to_weights[i-1][1]
             
-            
-        out.write("<cutset=\"" + cutset + "\" weight=\"" + str(total_weight)
-            + "\"/>\n")
+        cutsets.append(cutset)
+        #out.write("<cutset=\"" + cutset + "\" weight=\"" + str(total_weight)
+            #+ "\"/>\n")
+        ET.SubElement(root, "cutset", items=', '.join(cutset), weight=str(total_weight))
+        
+        mi.close()
+        
+        mi = assemble_SATinput(num_variables, int(num_clauses) + rep + 1,
+            hard_weight, path_vulnerabilities, comps_to_weights, comps)
+        
+        mi.seek(0, 2)
+        
+        for cutset in cutsets:
+            mi.write(hard_weight)
+            for item in cutset:
+                mi.write(" -" + str(lookup(comps_to_weights, item)))
+            mi.write(" 0\n")
+        
+        '''print "SECOND"
+        mi.seek(0)
+        test= mi.read()
+        print test
+        mi.seek(0)'''
+    
+    tree = ET.ElementTree(root)
+    tree.write(out)
     
     #close tempfile, which deletes it
     mi.close()
@@ -183,7 +217,7 @@ if __name__ == "__main__":
     parser.add_argument('--outfile',
                         '-o',
                         type=str,
-                        default="risk_groups",
+                        default="risk_groups_new",
                         help='''Name an output file to store the risk group data.''')
     parser.add_argument('--satsolver',
                         '-s',
