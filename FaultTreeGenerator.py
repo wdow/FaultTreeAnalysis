@@ -9,6 +9,11 @@ from sets import Set
 from subprocess import check_output, CalledProcessError
 import xml.etree.ElementTree as ET
 
+#TODO: does this work when not all vuls are actually used by components?
+#TODO: Cleanup junk comments/ print statements
+#TODO: Sanity Checking
+#TODO: Should the way weights are displayed be changed?
+
 def sanity_check(args):
     """Check to ensure infile exists, outfile is writeable, and SAT-solver is useable"""
     if not os.path.isfile(args.infile):
@@ -23,47 +28,41 @@ def sanity_check(args):
     if not os.access(args.satsolver, os.X_OK):
         sys.exit("ERROR: User does not have permission to run SAT-solver '" + args.satsolver +"'")
         
-        
 #end sanity_check
 
-def lookup(ls, comp):
-    """helper function, finds if comp is present in a nested list and returns
-    that nested list's index"""
-    for entry in ls:
-        if (entry[0] == comp):
-            
-            return ls.index(entry) + 1
-    return -1
+def adjust_weight(weight):
+    return int((-100) * math.log(float(weight)/float(20)))
     
-def get_weight(ls, comp):
-    """helper function, finds weight of specified comp in nested list"""
-    for entry in ls:
-        if (entry[0] == comp):
-            return entry[1]
-    return -1
-    
-def assemble_SATinput(num_variables, num_clauses, hard_weight,
-    path_vulnerabilities, comps_to_weights, comps):
+def assemble_SATinput(vul_dict, vul_to_int, vul_adjusted, path_vuls, cutsets):
     mi = NamedTemporaryFile()
 
-    mi.write("p wcnf " + num_variables + " " + str(num_clauses) + " "
-        + hard_weight + "\n")
+    hard_weight = str(sum(vul_adjusted.values()) + 1)
+
+    mi.write("p wcnf " + str(len(vul_dict)) + " " + str(len(path_vuls) +
+        len(vul_dict) + len(cutsets)) + " " + hard_weight + "\n")
     
-    #write the components, preappended with the hard weight
-    for path in path_vulnerabilities:
+    #write the vulnerabilities, preappended with the hard weight
+    for path in path_vuls:
         mi.write(hard_weight)
-        for comp in path:
-            mi.write(" " + str(lookup(comps_to_weights, comp)))
+        for vul in path:
+            mi.write(" " + vul_to_int[vul])
         mi.write(" 0\n")
-        #mi.write(hard_weight + " " + " ".join(path) + " 0\n")
+        
+    #write the negation of any cutsets already found, so that they
+    #will be discounted from this round of SAT-solving
+    for ct in cutsets:
+        mi.write(hard_weight)
+        for vul in ct:
+            mi.write(" -" + vul_to_int[vul])
+        mi.write(" 0\n")
     
-    #write the clauses weighting each component
-    for comp in comps:
-        mi.write(str(1 * get_weight(comps_to_weights, comp[0])) + " -"
-            + str(lookup(comps_to_weights, comp[0])) + " 0\n")
-        #mi.write(str(vul[1]) + " " + "-" + str(vuls.index(vul) + 1) + " 0\n")
+    #write the clauses weighting each vulnerability
+    for vul in vul_adjusted:
+        mi.write(str(vul_adjusted[vul]) + " -"
+            + vul_to_int[vul] + " 0\n")
         
     return mi
+#end assemble_SATinput
 
 def main(args):
     """"Main logic"""
@@ -78,66 +77,57 @@ def main(args):
     paths = re.findall(network_paths, info)
     comps = re.findall(components, info)
     vuls = re.findall(vulnerabilities, info)
+    
+    #print vuls
+    
+    comp_dict = dict(zip([x[0] for x in comps], [x[3] for x in comps]))
+    vul_dict = dict(vuls)
+    vul_to_int = dict(zip([x[0] for x in vuls],
+        [str(vuls.index(x) + 1) for x in vuls]))
+    
+    #print paths
+    #print comps
+    #print vuls
+    
+    #print comp_dict
+    #print vul_dict
+    #print vul_to_int
 
     fin.close()
 
-    path_vulnerabilities = []
+    path_vuls = []
 
     comp_tracker = 1
     #comps_to_ints = {}
     comps_to_weights = []
 
     for path in paths:
-        path_vuls = Set([])
+        line_vuls = Set([])
         path_comps = [x for x in path[2].split(',')]
         path_comps.append(path[0])
         
-        '''for comp in path_comps:
-            if comp not in comps_to_ints:
-                comps_to_ints[comp] = comp_tracker
-                comp_tracker += 1'''
-        #print "map: "
-        #print comps_to_ints
-        
-        #need to add up vuls associated with each comp to get a weight for that comp
+        #print "pathcomps:"
+        #print path_comps
+
         
         #print path_comps
         #grab vulnerabilities of the path itself
-        for comp in comps:
-            weight = 0
-            if(comp[0] in path_comps):
-                comp_vuls = comp[3].split(',')
-                for cv in comp_vuls:
-                    
-                    for vul in vuls:
-                        if(cv == vul[0]):
-                            weight += int(vul[1])
-                            #print weight
-                adjusted_weight = int((-100) * math.log(float(weight)/float(20)))
-                if [comp[0], adjusted_weight] not in comps_to_weights:
-                    comps_to_weights.append([comp[0], adjusted_weight])
-        
-        path_vulnerabilities.append(path_comps)
-                        
-    #print "int tags: "
-    #print comps_to_ints
-    print "weights: "
-    print comps_to_weights
-    
-        
-    
-    #print path_vulnerabilities
-
-
-    num_variables = str(len(comps_to_weights))
-    num_clauses = str(len(comps_to_weights) + len(path_vulnerabilities))
-    hard_weight = str(sum([get_weight(comps_to_weights, comp[0]) for comp in comps]) + 1)
-
-    #print num_variables, num_clauses, hard_weight
+        for comp in path_comps:
+            v = comp_dict[comp].split(',')
+            for vul in v:
+                if vul not in line_vuls:
+                    line_vuls.add(vul)
+            #print 'line vuls:'
+            #print line_vuls
+        vul_adjusted = {}
+        for vul in vul_dict:
+            vul_adjusted[vul] = adjust_weight(int(vul_dict[vul]))
+            
+        print vul_adjusted
+        path_vuls.append(line_vuls)
 
     #now generate maxino input as a tempfile
-    mi = assemble_SATinput(num_variables, num_clauses, hard_weight,
-        path_vulnerabilities, comps_to_weights, comps)
+    mi = assemble_SATinput(vul_dict, vul_to_int, vul_adjusted, path_vuls, [])
         
     #now run the maxino SAT-solver on the tempfile to find a risk group,
     #then append a line to the tempfile to remove the old risk group from
@@ -164,32 +154,34 @@ def main(args):
                 raise
     
         rg = re.findall(optimum_result, maxino_output)
+        
+        print 'rg'
+        print rg
+        
+        
+        
+        
         cutset = []
         total_weight = 0
-        component_config = [int(x) for x in rg[0].split(" ")]
-        for i in component_config:
-
-            if(i > 0):
-                cutset.append(comps_to_weights[i-1][0])
-                total_weight += comps_to_weights[i-1][1]
-            
+        vul_config = [int(x) for x in rg[0].split(" ")]
+        print vul_to_int
+        for v in vul_config:
+            if(v > 0):
+                trig_vul = list(vul_to_int.keys())[list(vul_to_int.values()).index(str(v))]
+                cutset.append(trig_vul)
+                total_weight = total_weight + int(vul_dict[trig_vul])
+        print "cutset"
+        print cutset
         cutsets.append(cutset)
-        #out.write("<cutset=\"" + cutset + "\" weight=\"" + str(total_weight)
-            #+ "\"/>\n")
+        
+        print "path_vuls"
+        print path_vuls
+        
         ET.SubElement(root, "cutset", items=', '.join(cutset), weight=str(total_weight))
         
         mi.close()
         
-        mi = assemble_SATinput(num_variables, int(num_clauses) + rep + 1,
-            hard_weight, path_vulnerabilities, comps_to_weights, comps)
-        
-        mi.seek(0, 2)
-        
-        for cutset in cutsets:
-            mi.write(hard_weight)
-            for item in cutset:
-                mi.write(" -" + str(lookup(comps_to_weights, item)))
-            mi.write(" 0\n")
+        mi = assemble_SATinput(vul_dict, vul_to_int, vul_adjusted, path_vuls, cutsets)
         
         '''print "SECOND"
         mi.seek(0)
@@ -219,7 +211,7 @@ if __name__ == "__main__":
     parser.add_argument('--outfile',
                         '-o',
                         type=str,
-                        default="risk_groups_new",
+                        default="risk_groups",
                         help='''Name an output file to store the risk group data.''')
     parser.add_argument('--satsolver',
                         '-s',
