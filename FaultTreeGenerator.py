@@ -3,6 +3,7 @@ import argparse
 import re
 import os
 import sys
+import math
 from tempfile import NamedTemporaryFile
 from sets import Set
 from subprocess import check_output, CalledProcessError
@@ -30,6 +31,7 @@ def lookup(ls, comp):
     that nested list's index"""
     for entry in ls:
         if (entry[0] == comp):
+            
             return ls.index(entry) + 1
     return -1
     
@@ -57,7 +59,7 @@ def assemble_SATinput(num_variables, num_clauses, hard_weight,
     
     #write the clauses weighting each component
     for comp in comps:
-        mi.write(str(-1 * get_weight(comps_to_weights, comp[0])) + " -"
+        mi.write(str(1 * get_weight(comps_to_weights, comp[0])) + " -"
             + str(lookup(comps_to_weights, comp[0])) + " 0\n")
         #mi.write(str(vul[1]) + " " + "-" + str(vuls.index(vul) + 1) + " 0\n")
         
@@ -111,25 +113,25 @@ def main(args):
                         if(cv == vul[0]):
                             weight += int(vul[1])
                             #print weight
-                if [comp[0], weight] not in comps_to_weights:
-                    comps_to_weights.append([comp[0], weight])
+                adjusted_weight = int((-100) * math.log(float(weight)/float(20)))
+                if [comp[0], adjusted_weight] not in comps_to_weights:
+                    comps_to_weights.append([comp[0], adjusted_weight])
         
         path_vulnerabilities.append(path_comps)
                         
     #print "int tags: "
     #print comps_to_ints
-    #print "weights: "
-    #print comps_to_weights
+    print "weights: "
+    print comps_to_weights
     
         
     
     #print path_vulnerabilities
 
+
     num_variables = str(len(comps_to_weights))
     num_clauses = str(len(comps_to_weights) + len(path_vulnerabilities))
-    hard_weight = str(sum(int(vul[1]) for vul in vuls ) + 1)
-    
-    #print hard_weight
+    hard_weight = str(sum([get_weight(comps_to_weights, comp[0]) for comp in comps]) + 1)
 
     #print num_variables, num_clauses, hard_weight
 
