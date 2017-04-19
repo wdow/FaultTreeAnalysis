@@ -9,23 +9,28 @@ from tempfile import NamedTemporaryFile
 from sets import Set
 from subprocess import check_output, CalledProcessError
 import xml.etree.ElementTree as ET
-
-#TODO: Sanity Checking
+import xml.dom.minidom
 
 def sanity_check(args):
     """Check to ensure infile exists, outfile is writeable,
     and SAT-solver is useable"""
+
     if not os.path.isfile(args.infile):
-        sys.exit("ERROR: Infile '" + args.infile + "' does not exist.")
+        sys.exit("ERROR: Infile '" + args.infile + "'does not exist.")
         
     if not os.access(args.infile, os.R_OK):
         sys.exit("ERROR: User does not have permission to read file '" + args.infile +"'")
     
-    if os.path.isfile(args.outfile) and not os.access(args.outfile, os.W_OK):
-        sys.exit("ERROR: User does not have permission to write to '" + args.outfile + "'")
-        
+    if args.outfile and os.path.isfile(args.outfile) and not os.access(args.outfile, os.W_OK):
+        sys.exit("ERROR: User does not have permission to write to '"
+            + args.outfile + "'")
+    
+    if not os.path.isfile(args.satsolver):
+        sys.exit("ERROR: SAT-solver '" + args.satsolver + "' does not exist.")
+    
     if not os.access(args.satsolver, os.X_OK):
-        sys.exit("ERROR: User does not have permission to run SAT-solver '" + args.satsolver +"'")
+        sys.exit("ERROR: User does not have permission to run SAT-solver '"
+            + args.satsolver +"'")
         
 #end sanity_check
 
@@ -78,27 +83,32 @@ def main(args):
     components = '\{(?P<uid>.+), "(?P<comp_name>.+)", "(?P<IP>.+)", vul="(?P<vul>.*)"\}'
     vulnerabilities = '{name="(?P<vul_name>.+)" score="(?P<weight>\d+)"}'
 
-    fin = open(args.infile)
-    info = fin.read()
+    if args.infile:
+        fin = open(args.infile)
+        info = fin.read()
+        fin.close()
+    else:
+        info = raw_input()
 
     paths = re.findall(network_paths, info)
     comps = re.findall(components, info)
     vuls = re.findall(vulnerabilities, info)
     
-    """print paths
-    print comps
-    print vuls"""
+    #print paths
+    #print comps[0]
+    #print vuls
     
+    #print "\n\n"
     
     if not paths or not comps or not vuls:
-        sys.exit("ERROR: Malformed infile '" + args.infile + "'")
+        sys.exit("ERROR: Malformed input.")
     
     comp_dict = dict(zip([x[0] for x in comps], [x[3] for x in comps]))
     vul_dict = dict(vuls)
     vul_to_int = dict(zip([x[0] for x in vuls],
         [str(vuls.index(x) + 1) for x in vuls]))
 
-    fin.close()
+    
 
     path_vuls = []
 
@@ -114,6 +124,7 @@ def main(args):
 
         #grab vulnerabilities of the path itself
         for comp in path_comps:
+            #print comp_dict
             v = comp_dict[comp].split(',')
             for vul in v:
                 if vul not in line_vuls:
@@ -133,7 +144,6 @@ def main(args):
     #then append a line to the tempfile to remove that old risk group from
     #consideration for further runs
     optimum_result = 's OPTIMUM FOUND\nv (?P<opt>.+)'
-    out = open(args.outfile, "w")
 
     root = ET.Element("cutsets")
     cutsets = []
@@ -172,12 +182,19 @@ def main(args):
         mi.close()
         mi = assemble_SATinput(vul_dict, vul_to_int, vul_adjusted, path_vuls, cutsets)
 
-    tree = ET.ElementTree(root)
-    tree.write(out)
-    
-    #close tempfile, outfile
+
     mi.close()
-    out.close()
+    
+
+    if not args.outfile:
+        pxml = xml.dom.minidom.parseString(ET.tostring(root, 'utf-8'))
+        print pxml.toprettyxml()
+
+    else:
+        out = open(args.outfile, "w")
+        tree = ET.ElementTree(root)
+        tree.write(out)
+        out.close()
 
 #end main
 
@@ -185,17 +202,17 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="""Takes in dependency information about a system and 
         uses the Maxino SAT solver to find the system's risk groups.""")
-    parser.add_argument('--infile',
-                        '-i',
+    parser.add_argument('infile',
                         type=str,
-                        default="example-input",
+                        default=None,
                         help='''Designate an input file with the target 
                                 system's dependency information.''')
     parser.add_argument('--outfile',
                         '-o',
                         type=str,
-                        default="risk_groups",
-                        help='''Name an output file to store the risk group data.''')
+                        default=None,
+                        help='''Name an output file to store the risk group data.
+                            Otherwise, print to stdout.''')
     parser.add_argument('--satsolver',
                         '-s',
                         type=str,
