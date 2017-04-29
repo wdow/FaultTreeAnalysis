@@ -1,0 +1,215 @@
+<src="c1" dst="Internet" route="c66,c44"/>
+<src="c2" dst="Internet" route="c88,c94,c42"/>
+<src="c3" dst="Internet" route="c93,c64,c70"/>
+<src="c4" dst="Internet" route="c80,c94,c20"/>
+<src="c5" dst="Internet" route="c75"/>
+<src="c6" dst="Internet" route="c78,c98,c53"/>
+<src="c7" dst="Internet" route="c73"/>
+<src="c8" dst="Internet" route="c93,c54,c6"/>
+<src="c9" dst="Internet" route="c68"/>
+
+
+
+{c1, "name", "IP", vul="v91,v32"}
+{c2, "name", "IP", vul="v78,v87,v82"}
+{c3, "name", "IP", vul="v73,v79,v57"}
+{c4, "name", "IP", vul="v71,v10,v82"}
+{c5, "name", "IP", vul="v18,v24,v21"}
+{c6, "name", "IP", vul="v64,v86,v88"}
+{c7, "name", "IP", vul="v12,v21,v29"}
+{c8, "name", "IP", vul="v43,v40"}
+{c9, "name", "IP", vul="v38,v87,v78"}
+{c10, "name", "IP", vul="v1"}
+{c11, "name", "IP", vul="v81"}
+{c12, "name", "IP", vul="v58,v16,v32"}
+{c13, "name", "IP", vul="v53,v92,v57"}
+{c14, "name", "IP", vul="v33,v64,v44"}
+{c15, "name", "IP", vul="v43,v55"}
+{c16, "name", "IP", vul="v71,v8"}
+{c17, "name", "IP", vul="v17,v74"}
+{c18, "name", "IP", vul="v11"}
+{c19, "name", "IP", vul="v23,v4"}
+{c20, "name", "IP", vul="v17,v16,v60"}
+{c21, "name", "IP", vul="v76,v21"}
+{c22, "name", "IP", vul="v19,v4,v31"}
+{c23, "name", "IP", vul="v78,v72,v47"}
+{c24, "name", "IP", vul="v42"}
+{c25, "name", "IP", vul="v71"}
+{c26, "name", "IP", vul="v83"}
+{c27, "name", "IP", vul="v7,v1,v70"}
+{c28, "name", "IP", vul="v3,v30"}
+{c29, "name", "IP", vul="v84"}
+{c30, "name", "IP", vul="v84,v32"}
+{c31, "name", "IP", vul="v80,v93"}
+{c32, "name", "IP", vul="v77,v75,v25"}
+{c33, "name", "IP", vul="v91,v47,v88"}
+{c34, "name", "IP", vul="v11,v34,v35"}
+{c35, "name", "IP", vul="v96,v90"}
+{c36, "name", "IP", vul="v73"}
+{c37, "name", "IP", vul="v62,v70,v31"}
+{c38, "name", "IP", vul="v64"}
+{c39, "name", "IP", vul="v66,v56"}
+{c40, "name", "IP", vul="v65"}
+{c41, "name", "IP", vul="v16,v46"}
+{c42, "name", "IP", vul="v31,v73,v18"}
+{c43, "name", "IP", vul="v83,v25,v70"}
+{c44, "name", "IP", vul="v18"}
+{c45, "name", "IP", vul="v92"}
+{c46, "name", "IP", vul="v98,v68,v98"}
+{c47, "name", "IP", vul="v100,v75,v96"}
+{c48, "name", "IP", vul="v91,v63,v1"}
+{c49, "name", "IP", vul="v28,v24"}
+{c50, "name", "IP", vul="v22"}
+{c51, "name", "IP", vul="v5,v11,v50"}
+{c52, "name", "IP", vul="v21,v43,v20"}
+{c53, "name", "IP", vul="v33,v74,v41"}
+{c54, "name", "IP", vul="v88,v51,v65"}
+{c55, "name", "IP", vul="v69,v42"}
+{c56, "name", "IP", vul="v56,v52"}
+{c57, "name", "IP", vul="v68,v7"}
+{c58, "name", "IP", vul="v8,v2,v95"}
+{c59, "name", "IP", vul="v59,v99,v41"}
+{c60, "name", "IP", vul="v81,v28,v76"}
+{c61, "name", "IP", vul="v20,v29,v45"}
+{c62, "name", "IP", vul="v11"}
+{c63, "name", "IP", vul="v3,v25"}
+{c64, "name", "IP", vul="v49,v28"}
+{c65, "name", "IP", vul="v31"}
+{c66, "name", "IP", vul="v100,v49,v2"}
+{c67, "name", "IP", vul="v16,v47"}
+{c68, "name", "IP", vul="v75,v94"}
+{c69, "name", "IP", vul="v68,v29"}
+{c70, "name", "IP", vul="v57,v19"}
+{c71, "name", "IP", vul="v17,v79"}
+{c72, "name", "IP", vul="v33"}
+{c73, "name", "IP", vul="v96,v26"}
+{c74, "name", "IP", vul="v35,v64"}
+{c75, "name", "IP", vul="v27,v56"}
+{c76, "name", "IP", vul="v44"}
+{c77, "name", "IP", vul="v89,v90,v7"}
+{c78, "name", "IP", vul="v60"}
+{c79, "name", "IP", vul="v13,v61,v61"}
+{c80, "name", "IP", vul="v95,v26,v3"}
+{c81, "name", "IP", vul="v56,v6,v95"}
+{c82, "name", "IP", vul="v92,v15,v98"}
+{c83, "name", "IP", vul="v89"}
+{c84, "name", "IP", vul="v24,v86"}
+{c85, "name", "IP", vul="v13,v18"}
+{c86, "name", "IP", vul="v87,v15,v6"}
+{c87, "name", "IP", vul="v73,v90,v30"}
+{c88, "name", "IP", vul="v74,v2"}
+{c89, "name", "IP", vul="v24"}
+{c90, "name", "IP", vul="v52,v11,v30"}
+{c91, "name", "IP", vul="v75,v39"}
+{c92, "name", "IP", vul="v11,v32,v57"}
+{c93, "name", "IP", vul="v8"}
+{c94, "name", "IP", vul="v69"}
+{c95, "name", "IP", vul="v7,v17"}
+{c96, "name", "IP", vul="v64,v15"}
+{c97, "name", "IP", vul="v38"}
+{c98, "name", "IP", vul="v84"}
+{c99, "name", "IP", vul="v47,v4,v72"}
+{c100, "name", "IP", vul="v96"}
+
+
+
+{name="v1" score="6"}
+{name="v2" score="5"}
+{name="v3" score="4"}
+{name="v4" score="7"}
+{name="v5" score="6"}
+{name="v6" score="1"}
+{name="v7" score="3"}
+{name="v8" score="5"}
+{name="v9" score="1"}
+{name="v10" score="3"}
+{name="v11" score="6"}
+{name="v12" score="10"}
+{name="v13" score="4"}
+{name="v14" score="3"}
+{name="v15" score="7"}
+{name="v16" score="7"}
+{name="v17" score="8"}
+{name="v18" score="6"}
+{name="v19" score="5"}
+{name="v20" score="2"}
+{name="v21" score="1"}
+{name="v22" score="5"}
+{name="v23" score="2"}
+{name="v24" score="9"}
+{name="v25" score="7"}
+{name="v26" score="3"}
+{name="v27" score="9"}
+{name="v28" score="6"}
+{name="v29" score="4"}
+{name="v30" score="5"}
+{name="v31" score="5"}
+{name="v32" score="7"}
+{name="v33" score="3"}
+{name="v34" score="10"}
+{name="v35" score="4"}
+{name="v36" score="6"}
+{name="v37" score="8"}
+{name="v38" score="4"}
+{name="v39" score="10"}
+{name="v40" score="2"}
+{name="v41" score="7"}
+{name="v42" score="9"}
+{name="v43" score="1"}
+{name="v44" score="9"}
+{name="v45" score="9"}
+{name="v46" score="7"}
+{name="v47" score="1"}
+{name="v48" score="2"}
+{name="v49" score="4"}
+{name="v50" score="8"}
+{name="v51" score="4"}
+{name="v52" score="4"}
+{name="v53" score="10"}
+{name="v54" score="3"}
+{name="v55" score="6"}
+{name="v56" score="10"}
+{name="v57" score="4"}
+{name="v58" score="3"}
+{name="v59" score="5"}
+{name="v60" score="3"}
+{name="v61" score="1"}
+{name="v62" score="6"}
+{name="v63" score="6"}
+{name="v64" score="7"}
+{name="v65" score="3"}
+{name="v66" score="4"}
+{name="v67" score="7"}
+{name="v68" score="3"}
+{name="v69" score="6"}
+{name="v70" score="10"}
+{name="v71" score="7"}
+{name="v72" score="7"}
+{name="v73" score="6"}
+{name="v74" score="3"}
+{name="v75" score="2"}
+{name="v76" score="3"}
+{name="v77" score="3"}
+{name="v78" score="1"}
+{name="v79" score="6"}
+{name="v80" score="9"}
+{name="v81" score="10"}
+{name="v82" score="8"}
+{name="v83" score="8"}
+{name="v84" score="6"}
+{name="v85" score="7"}
+{name="v86" score="10"}
+{name="v87" score="6"}
+{name="v88" score="6"}
+{name="v89" score="5"}
+{name="v90" score="2"}
+{name="v91" score="9"}
+{name="v92" score="1"}
+{name="v93" score="9"}
+{name="v94" score="4"}
+{name="v95" score="8"}
+{name="v96" score="8"}
+{name="v97" score="9"}
+{name="v98" score="9"}
+{name="v99" score="9"}
+{name="v100" score="7"}
