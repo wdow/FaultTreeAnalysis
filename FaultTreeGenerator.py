@@ -1,5 +1,17 @@
 #! /usr/bin/env python
 
+#================================================================
+#
+#   FaultTreeGenerator.py -- script to identify top risk groups
+#   in a list of dependency data
+#
+#   Written by Will Dower (william.dower@yale.edu) for Yale
+#   CPSC 490
+#
+#   May 3rd, 2017
+#
+#================================================================
+
 import argparse
 import re
 import os
@@ -13,21 +25,28 @@ import xml.dom.minidom
 
 def sanity_check(args):
     """Check to ensure infile exists, outfile is writeable,
-    and SAT-solver is useable"""
+    and SAT-solver is executable"""
 
+    #does infile exist?
     if not os.path.isfile(args.infile):
         sys.exit("ERROR: Infile '" + args.infile + "'does not exist.")
-        
-    if not os.access(args.infile, os.R_OK):
-        sys.exit("ERROR: User does not have permission to read file '" + args.infile +"'")
     
-    if args.outfile and os.path.isfile(args.outfile) and not os.access(args.outfile, os.W_OK):
+    #does user have reading privilege for infile?
+    if not os.access(args.infile, os.R_OK):
+        sys.exit("ERROR: User does not have permission to read file '"
+            + args.infile +"'")
+    
+    #is there a specified outfile, and can it be written to?
+    if (args.outfile and os.path.isfile(args.outfile) and not
+        os.access(args.outfile, os.W_OK)):
         sys.exit("ERROR: User does not have permission to write to '"
             + args.outfile + "'")
     
+    #does the satsolver exist?
     if not os.path.isfile(args.satsolver):
         sys.exit("ERROR: SAT-solver '" + args.satsolver + "' does not exist.")
     
+    #is the satsolver executable?
     if not os.access(args.satsolver, os.X_OK):
         sys.exit("ERROR: User does not have permission to run SAT-solver '"
             + args.satsolver +"'")
@@ -83,37 +102,28 @@ def main(args):
     components = '\{(?P<uid>.+), "(?P<comp_name>.+)", "(?P<IP>.+)", vul="(?P<vul>.*)"\}'
     vulnerabilities = '{name="(?P<vul_name>.+)" score="(?P<weight>\d+)"}'
 
-    if args.infile:
-        fin = open(args.infile)
-        info = fin.read()
-        fin.close()
-    else:
-        info = raw_input()
+    #grab input from file
+    fin = open(args.infile)
+    info = fin.read()
+    fin.close()
 
+    #grab dependency data from input
     paths = re.findall(network_paths, info)
     comps = re.findall(components, info)
     vuls = re.findall(vulnerabilities, info)
     
-    #print paths
-    #print comps[0]
-    #print vuls
-    
-    #print "\n\n"
-    
+    #fail if not enough information gathered
     if not paths or not comps or not vuls:
         sys.exit("ERROR: Malformed input.")
     
+    #arrange dependency data in dicts for easy access
     comp_dict = dict(zip([x[0] for x in comps], [x[3] for x in comps]))
     vul_dict = dict(vuls)
     vul_to_int = dict(zip([x[0] for x in vuls],
         [str(vuls.index(x) + 1) for x in vuls]))
 
-    
-
     path_vuls = []
-
     comp_tracker = 1
-    #comps_to_ints = {}
     comps_to_weights = []
 
     #figure out the vulnerabilities in each path
@@ -124,13 +134,11 @@ def main(args):
 
         #grab vulnerabilities of the path itself
         for comp in path_comps:
-            #print comp_dict
             v = comp_dict[comp].split(',')
             for vul in v:
                 if vul not in line_vuls:
                     line_vuls.add(vul)
-            #print 'line vuls:'
-            #print line_vuls
+        #adjust vulnerability score so that it can work with the SAT-solver
         vul_adjusted = {}
         for vul in vul_dict:
             vul_adjusted[vul] = adjust_weight(int(vul_dict[vul]))
@@ -156,6 +164,12 @@ def main(args):
         except CalledProcessError as ex:
             maxino_output = ex.output
             returncode = ex.returncode
+            
+            if returncode == 20:
+                sys.stderr.write("ERROR: SAT-solver failed on repetition " + 
+                    str(rep) + ".\n")
+                break
+            
             if returncode != 10: # some other error happened
                 raise
     
@@ -173,35 +187,44 @@ def main(args):
                 trig_vul = list(vul_to_int.keys())[list(vul_to_int.values()).index(str(v))]
                 cutset.append(trig_vul)
                 reported_weight = reported_weight * (float(vul_dict[trig_vul])/20.0)
+        #for cutsets with many components, reported_weight might become too
+        #small to be useful, so normalize it to 1
+        if reported_weight < 1e-5:
+            reported_weight = 1
         cutsets.append(cutset)
         
-        ET.SubElement(root, "cutset", items=', '.join(cutset), weight=str(reported_weight))
+        ET.SubElement(root, "cutset", items=', '.join(cutset),
+            weight=str(reported_weight))
         
         #recreate the tempfile with the old risk group as a high-weighted clause
         #to ensure the same risk group won't be picked again
         mi.close()
-        mi = assemble_SATinput(vul_dict, vul_to_int, vul_adjusted, path_vuls, cutsets)
+        mi = assemble_SATinput(vul_dict, vul_to_int, vul_adjusted,
+            path_vuls, cutsets)
 
-
+    #close tempfile
     mi.close()
+    #format xml output for readability
+    pxml = xml.dom.minidom.parseString(ET.tostring(root, 'utf-8'))
     
-
+    #if -o option not specified, print to stdout
     if not args.outfile:
-        pxml = xml.dom.minidom.parseString(ET.tostring(root, 'utf-8'))
         print pxml.toprettyxml()
 
+    #else write to file
     else:
         out = open(args.outfile, "w")
-        tree = ET.ElementTree(root)
-        tree.write(out)
+        out.write(pxml.toprettyxml())
         out.close()
 
 #end main
 
 if __name__ == "__main__":
+    #use argparserto handle command line args
     parser = argparse.ArgumentParser(
         description="""Takes in dependency information about a system and 
         uses the Maxino SAT solver to find the system's risk groups.""")
+    #infile is the only required arg
     parser.add_argument('infile',
                         type=str,
                         default=None,
@@ -212,13 +235,16 @@ if __name__ == "__main__":
                         type=str,
                         default=None,
                         help='''Name an output file to store the risk group data.
-                            Otherwise, print to stdout.''')
+                            Otherwise, prints to stdout.''')
+    #allow specification of which satsolver to use, just in case a user
+    #wants to use a different version of maxino
     parser.add_argument('--satsolver',
                         '-s',
                         type=str,
                         default="maxino-2015-k16-static",
                         help='''Name a version of the Maxino SAT-solver to use
                          in processing the dependency information.''')
+    #reps is the number of risk groups the script should return
     parser.add_argument('--reps',
                         '-r',
                         type=int,
@@ -226,6 +252,8 @@ if __name__ == "__main__":
                         help='''Specify the number of risk groups that should be found.''')
     args = parser.parse_args()
     
+    #check that all arguments exist and are useable
     sanity_check(args)
     
+    #find risk groups
     main(args)
