@@ -1,0 +1,9 @@
+bf1 run
+13602.41user 62.88system 4:37:54elapsed 81%CPU (0avgtext+0avgdata 22196maxresident)k
+136inputs+3326544outputs (0major+19815401minor)pagefaults 0swaps
+bf2 run
+43561.64user 98.85system 13:38:30elapsed 88%CPU (0avgtext+0avgdata 33432maxresident)k
+5224inputs+3484272outputs (17major+27991986minor)pagefaults 0swaps
+bf3 run
+10503.89user 50.47system 3:05:55elapsed 94%CPU (0avgtext+0avgdata 22320maxresident)k
+0inputs+3531416outputs (0major+18440593minor)pagefaults 0swaps

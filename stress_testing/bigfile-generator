@@ -1,0 +1,51 @@
+#! /usr/bin/env python
+
+
+import random
+import sys
+
+def main(outfile):
+
+
+    vlist = {}
+    for x in range(1, 101):
+        vlist[("v" + str(x))] = random.randint(1, 10)
+    
+    
+    
+    clist = {}
+    for x in range(1, 101):
+        entry = "v" + str(random.randint(1, 100))
+        for y in range(1, random.randint(1, 3)):
+            entry = entry + ",v" + str(random.randint(1, 100))
+        
+        clist[("c" + str(x))] = entry
+    
+    
+    f = open(outfile, "w")
+    
+    for x in range(1, 10):
+        route = "c" + str(random.randint(1, 99))
+        for y in range(1, random.randint(1, 3)):
+            route = route + ",c" + str(random.randint(1, 99))
+    
+        f.write("<src=\"c" + str(x) + "\" dst=\"Internet\" route=\"" + route + "\"/>\n")
+        
+        
+    f.write("\n\n\n")
+    
+    for x in range(1, 101):
+        f.write("{c" + str(x) + ", \"name\", \"IP\", vul=\""+ clist["c" + str(x)] + "\"}\n")
+        
+    f.write("\n\n\n")
+    
+    for x in range(1, 101):
+        f.write("{name=\"v" + str(x) + "\" score=\"" + str(vlist[("v" + str(x))]) + "\"}\n")
+        
+        
+    f.close()
+
+
+if __name__ == "__main__":
+
+    main(sys.argv[1])
