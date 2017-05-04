@@ -1,0 +1,53 @@
+topo-128, r=10
+
+real	0m0.167s
+user	0m0.131s
+sys	0m0.025s
+
+topo-128, r=100
+
+real	0m0.800s
+user	0m0.636s
+sys	0m0.118s
+
+topo-128, r=1000
+
+real	3m25.582s
+user	3m22.864s
+sys	0m1.844s
+
+topo-1024, r=10
+
+real	0m9.356s
+user	0m9.298s
+sys	0m0.031s
+
+topo-1024, r=100
+
+real	0m13.376s
+user	0m13.070s
+sys	0m0.229s
+
+topo-1024, r=1000
+
+real	1m39.992s
+user	1m36.956s
+sys	0m2.430s
+
+topo-3456, r=10
+
+real	2m50.627s
+user	2m50.240s
+sys	0m0.083s
+
+topo-3456, r=100
+
+real	3m8.066s
+user	3m7.064s
+sys	0m0.625s
+
+topo-128, r=1000
+
+real	12m13.922s
+user	12m3.458s
+sys	0m8.488s
