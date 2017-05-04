@@ -1,0 +1,151 @@
+#! /usr/bin/env python
+
+#================================================================
+#
+#   ft_analyzer -- script to identify top risk groups
+#   in a list of dependency data
+#
+#   Written by Will Dower (william.dower@yale.edu) for Yale
+#   CPSC 490
+#
+#   May 3rd, 2017
+#
+#================================================================
+
+import argparse
+import re
+import os
+import sys
+import math
+import xml.etree.ElementTree as ET
+import xml.dom.minidom
+
+import dependency_file_manager as dfm
+import sat_solver_manager as sat
+
+def sanity_check(args):
+    """Check to ensure infile exists, outfile is writeable"""
+
+    #does infile exist?
+    if not os.path.isfile(args.infile):
+        sys.exit("ERROR: Infile '" + args.infile + "' does not exist.")
+    
+    #does user have reading privilege for infile?
+    if not os.access(args.infile, os.R_OK):
+        sys.exit("ERROR: User does not have permission to read file '"
+            + args.infile +"'")
+    
+    #is there a specified outfile, and can it be written to?
+    if (args.outfile and os.path.isfile(args.outfile) and not
+        os.access(args.outfile, os.W_OK)):
+        sys.exit("ERROR: User does not have permission to write to '"
+            + args.outfile + "'")
+        
+#end sanity_check
+
+def main(args):
+    """"Main logic"""
+    
+    #grab dependency data
+    dependency_data = dfm.process_dependency_data(args.infile)
+    
+    paths = dependency_data[0]
+    comps = dependency_data[1]
+    vuls = dependency_data[2]
+    
+    #fail if not enough information gathered
+    if not paths or not comps or not vuls:
+        sys.exit("ERROR: Malformed input.")
+
+    dpv = dfm.determine_path_vulnerabilities(paths, comps, vuls)
+    
+    path_vuls = dpv[0]
+    vul_adjusted = dpv[1]
+    
+    vul_dict = dict(vuls)
+    vul_to_int = dfm.vuls_to_int(vuls)
+        
+    #now run the maxino SAT-solver on the tempfile to find a risk group,
+    #then append a line to the tempfile to remove that old risk group from
+    #consideration for further runs
+    
+    root = ET.Element("cutsets")
+    cutsets = []
+    
+    for rep in range(0, args.reps):
+        
+        #assemble input file
+        mi = sat.assemble_SATinput(path_vuls, vuls, vul_adjusted, cutsets)
+        mi.seek(0)
+        #print mi.read()
+        
+        #run the solver
+        maxino_output = sat.run_satsolver(mi)
+        
+        #chekc for failure -- if it fails, dump all cutsets found so far
+        if (maxino_output == "fail"):
+            sys.stderr.write("ERROR: SAT solver failed on repetition " +
+                str(rep) + ".\n")
+            break
+        
+        #interpret maxino output
+        risk_group = sat.process_output(maxino_output, vul_dict, vul_to_int)
+        
+        #the first element of the risk group is the list of its vulnerabilities,
+        #the second is its reported weight
+        cutsets.append(risk_group[0])
+        
+        ET.SubElement(root, "cutset", items=', '.join(risk_group[0]),
+            weight=str(risk_group[1]))
+        
+        #recreate the tempfile with the old risk group as a high-weighted clause
+        #to ensure the same risk group won't be picked again
+        mi.close()
+
+    #close tempfile
+    mi.close()
+    #format xml output for readability
+    pxml = xml.dom.minidom.parseString(ET.tostring(root, 'utf-8'))
+    
+    #if -o option not specified, print to stdout
+    if not args.outfile:
+        print pxml.toprettyxml()
+
+    #else write to file
+    else:
+        out = open(args.outfile, "w")
+        out.write(pxml.toprettyxml())
+        out.close()
+
+#end main
+
+if __name__ == "__main__":
+    #use argparserto handle command line args
+    parser = argparse.ArgumentParser(
+        description="""Takes in dependency information about a system and 
+        uses the Maxino SAT solver to find the system's risk groups.""")
+    #infile is the only required arg
+    parser.add_argument('infile',
+                        type=str,
+                        default=None,
+                        help='''Designate an input file with the target 
+                                system's dependency information.''')
+    parser.add_argument('--outfile',
+                        '-o',
+                        type=str,
+                        default=None,
+                        help='''Name an output file to store the risk group data.
+                            Otherwise, prints to stdout.''')
+    #reps is the number of risk groups the script should return
+    parser.add_argument('--reps',
+                        '-r',
+                        type=int,
+                        default=1,
+                        help='''Specify the number of risk groups that should be found.''')
+    args = parser.parse_args()
+    
+    #check that all arguments exist and are useable
+    sanity_check(args)
+    
+    #find risk groups
+    main(args)
